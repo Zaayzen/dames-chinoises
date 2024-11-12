@@ -65,9 +65,55 @@ let translate (c1, c2, c3) (v1, v2, v3) : case =
 let diff_case (c1a, c2a, c3a) (c1b, c2b, c3b) : case =
   (c1a - c1b, c2a - c2b, c3a - c3b);;
 
-(*let sont_cases_voisines (c1a, c2a, c3a) (c1b, c2b, c3b) : case =
-  (* j'avoue c'est horrible mais flm de faire mieux c bon Ã§a marche nsm *)
-  if (((c1a = c1b) && ((c2a = c2b + 1) || (c2a = c2b -1)) && ((c3a = c3b + 1) || (c3a = c3b -1)) && (c1a + c2a + c3a = 0) && (c1b + c2b + c3b = 0)) ||
-      ((c2a = c2b) && ((c1a = c1b + 1) || (c1a = c1b -1)) && ((c3a = c3b + 1) || (c3a = c3b -1)) && (c1a + c2a + c3a = 0) && (c1b + c2b + c3b = 0)) ||
-      ((c3a = c3b) && ((c2a = c2b + 1) || (c2a = c2b -1)) && ((c1a = c1b + 1) || (c1a = c1b -1)) && (c1a + c2a + c3a = 0) && (c1b + c2b + c3b = 0))) then true
-  else false;; *)
+let sont_cases_voisines (case1 : case) (case2 : case) : bool =
+  let (c1a, c2a, c3a) = case1  in
+  let (c1b, c2b, c3b) = case2  in
+  if (c1a, c2a, c3a) = (c1b, c2b + 1, c3b - 1) ||
+    (c1a, c2a, c3a) = (c1b, c2b - 1, c3b + 1) ||
+    (c1a, c2a, c3a) = (c1b + 1, c2b, c3b - 1) ||
+    (c1a, c2a, c3a) = (c1b - 1, c2b, c3b + 1) ||
+    (c1a, c2a, c3a) = (c1b - 1, c2b + 1, c3b) ||
+    (c1a, c2a, c3a) = (c1b + 1, c2b - 1, c3b) then true
+  else false;;
+
+let()= 
+  let case1 = (0, 0, 0) in
+  let case2 = (1, 0, -1) in
+  if(sont_cases_voisines case1 case2) then
+    Printf.printf "Les cases sont voisines"
+  else
+    Printf.printf "Les cases ne sont pas voisines";;
+
+
+let calcul_pivot (c1 : case) (c2 : case) : case option =
+  let (c1a, c1b, c1c) = c1 in
+  let (c2a, c2b, c2c) = c2 in
+  if (c1a = c2a && (c1b + c2b) mod 2 = 0 && (c1c + c2c) mod 2 = 0) then
+    Some (c1a, (c1b + c2b) / 2, (c1c + c2c) / 2)
+  else if (c1b = c2b && (c1a + c2a) mod 2 = 0 && (c1c + c2c) mod 2 = 0) then
+    Some ((c1a + c2a) / 2, c1b, (c1c + c2c) / 2)
+  else if (c1c = c2c && (c1a + c2a) mod 2 = 0 && (c1b + c2b) mod 2 = 0) then
+    Some ((c1a + c2a) / 2, (c1b + c2b) / 2, c1c)
+  else
+    None;;
+
+let()=
+  let case1 = (0, 2, -2) in
+  let case2 = (0, -2, 2) in
+  match calcul_pivot case1 case2 with
+  | Some (c1, c2, c3) -> Printf.printf "Le pivot est (%d, %d, %d)\n" c1 c2 c3
+  | None -> Printf.printf "Pas de pivot\n";;
+
+
+
+let vec_et_dist (c1 : case) (c2 : case) : vecteur * int =
+  let (dx, dy, dz) = diff_case c1 c2 in
+  let d = (abs dx + abs dy + abs dz) / 2 in
+  let unit_vector = (dx / d, dy / d, dz / d) in
+  (unit_vector, d);;
+
+let()=
+  let c1 = (0,2,-2) in
+  let c2 = (0,0,0) in
+  let ((i, j, k : vecteur), d) = vec_et_dist c1 c2 in
+  Printf.printf "Vecteur: (%d,%d,%d), Distance : %d\n" i j k d;;
