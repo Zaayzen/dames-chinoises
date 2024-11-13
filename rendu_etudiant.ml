@@ -42,13 +42,19 @@ let est_dans_losange ((i, j, k) : case) dim =
   (k <= dim) && (k >= -dim) &&
   (i + j + k = 0);;
 
-(* fonctions tests de est_dans_losange *)
-let()=
-  let case = (0, 0, 0) in
-  if est_dans_losange case dim then
+let test_est_dans_losange (i, j, k) =
+  if est_dans_losange (i,j,k) dim then
     Printf.printf "La case est dans le losange"
   else
     Printf.printf "La case n'est pas dans le losange";;
+
+test_est_dans_losange (0,0,0);; (* renvoie La case est dans le losange *)
+test_est_dans_losange (4,2,-6);; (* renvoie La case n'est pas dans le losange *)
+test_est_dans_losange (33,23,-56);; (* renvoie La case n'est pas dans le losange *)
+test_est_dans_losange (0,1,0);; (* renvoie La case n'est pas dans le losange *)
+test_est_dans_losange (5,-4,-1);; (* renvoie La case n'est pas dans le losange *)
+test_est_dans_losange (-5,-1,6);; (* renvoie La case n'est pas dans le losange *)
+test_est_dans_losange (6,-1,-5);; (* renvoie La case n'est pas dans le losange *)
 
 
 let est_dans_etoile ((i, j, k) : case) dim =
@@ -62,13 +68,22 @@ let est_dans_etoile ((i, j, k) : case) dim =
   est_dans_losange (i, j, k) dim || est_dans_losange (j, k, i) dim || est_dans_losange (k, i, j) dim;;
 
 (* fonctions tests de est_dans_etoile *)
-let()= 
-  let case = (0, 0, 0) in
-  if est_dans_etoile case dim then
-    Printf.printf "La case est dans l'etoile"
+let test_est_dans_etoile (i, j, k) =
+  if est_dans_etoile (i,j,k) dim then
+    Printf.printf "La case est dans le losange"
   else
-    Printf.printf "La case n'est pas dans l'etoile";;
+    Printf.printf "La case n'est pas dans le losange";;
 
+test_est_dans_etoile (0,0,0);; (* renvoie La case est dans l'etoile *)
+test_est_dans_etoile (4,2,-6);; (* renvoie La case n'est dans l'etoile *)
+test_est_dans_etoile (33,23,-56);; (* renvoie La case n'est pas dans l'etoile *)
+test_est_dans_etoile (0,1,0);; (* renvoie La case n'est pas dans l'etoile *)
+test_est_dans_etoile (5,-4,-1);; (* renvoie La case n'est dans l'etoile *)
+test_est_dans_etoile (-5,-1,6);; (* renvoie La case n'est dans l'etoile *)
+test_est_dans_etoile (6,-1,-5);; (* renvoie La case n'est dans l'etoile *)
+test_est_dans_etoile (6,-3,-3);; (* renvoie La case est dans l'etoile *)
+test_est_dans_etoile (-2,-3,5);; (* renvoie La case est dans l'etoile *)
+test_est_dans_etoile (3,-5,2);; (* renvoie La case est dans l'etoile *)
 
 let quelle_couleur (case : case) (configuration : configuration) : couleur =
   let (cases, _) = configuration in
