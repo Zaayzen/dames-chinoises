@@ -36,6 +36,8 @@ let mis_a_jour_configuration conf _ = Ok (conf)
 let gagnant _ = Libre
 let coup_possible _ _ = []
 (**)
+let est_case ((i,j,k):case):bool=
+  (i+j+k=0);;
 let est_dans_losange ((i, j, k) : case) dim =
   (j <= dim) && (j >= -dim) &&
   (k <= dim) && (k >= -dim) &&
@@ -82,9 +84,9 @@ let tourne_case m c =
     | 0 -> (i, j, k)
     | 1 | -5 -> (-k, -i, -j)
     | 2 | -4 -> (j, k, i)
-    | 3 | -3 -> (-i, -k, -j)
-    | 4 | -2 -> (k, j, i)
-    | 5 | -1 -> (-j, -i, -k)
+    | 3 | -3 -> (-i, -j, -k)
+    | 4 | -2 -> (k, i, j)
+    | 5 | -1 -> (-j, -k, -i)
     | _ -> failwith "Impossible";;
 
 (* fonctions tests de tourne_case *)
@@ -175,28 +177,25 @@ let rec tourne_liste (l : couleur list) : couleur list =
   |[a] -> [a]
   |t::q -> tourne_liste [] @ q @ [t];;
   
-let rec der_liste (l : couleur list) : couleur =
+let rec der_liste l =
   match l with
   | [] -> failwith "Liste vide : pas de dernier élément"
   | [a] -> a 
   | _ :: z -> der_liste z;;
+
 let rec remplir_segment m (i, j, k) =
   if m <= 0 then []
   else
     (i, j, k) :: remplir_segment (m - 1) (i, j + 1, k - 1);;
 
 let rec remplir_triangle_bas m (i, j, k) =
-  (* Génère les cases d'un triangle orienté vers le bas *)
   if m <= 0 then []
   else
-    (* Génère un segment horizontal puis descend d'une ligne *)
     remplir_segment m (i, j, k) @ remplir_triangle_bas (m - 1) (i - 1, j + 1, k);;
 
 let rec remplir_triangle_haut m (i, j, k) =
-  (* Génère les cases d'un triangle orienté vers le haut *)
   if m <= 0 then []
   else
-    (* Génère un segment horizontal puis monte d'une ligne *)
     remplir_segment m (i, j, k) @ remplir_triangle_haut (m - 1) (i + 1, j, k - 1);;
 
 let rec colorie (j : couleur) (liste : case list) : case_coloree list=
@@ -226,7 +225,7 @@ let rec remplir_init_3 (lj : couleur list) dim (n : int) : configuration =
       let triangle = remplir_triangle_bas dim (-dim-1,1,dim) in
       let cases_tournees = List.map (tourne_case n) triangle in
       let cases_colorees = colorie t cases_tournees in
-      let (cases_restantes, lj_restantes) = remplir_init_3 q dim (n+2) in
+      let (cases_restantes, lj_restantes) = remplir_init_3 q dim (n-2) in
       (cases_colorees @ cases_restantes,lj);;
 
 let rec remplir_init_6 (lj : couleur list) dim (n : int) : configuration =
@@ -236,7 +235,7 @@ let rec remplir_init_6 (lj : couleur list) dim (n : int) : configuration =
       let triangle = remplir_triangle_bas dim (-dim-1,1,dim) in
       let cases_tournees = List.map (tourne_case n) triangle in
       let cases_colorees = colorie t cases_tournees in
-      let (cases_restantes, lj_restantes) = remplir_init_3 q dim (n+1) in
+      let (cases_restantes, lj_restantes) = remplir_init_6 q dim (n-1) in
       (cases_colorees @ cases_restantes,lj);;
 
 let remplir_init (lj : couleur list) dim : configuration =
@@ -245,95 +244,111 @@ let remplir_init (lj : couleur list) dim : configuration =
   else if List.length lj = 6 then remplir_init_6 lj dim 0
   else ([],[]);;
 
-let configuration_initial =
-  remplir_init [Vert; Marron; Noir; Jaune; Rouge; Bleu] dim;;
+let configuration_initial = remplir_init [] dim;;
 
-let rec est_libre_seg (c1:case) (c2:case) (conf:configuration) : bool =
-  let rec aux (c:case) (c2:case) =
-    if c = c2 then true
+let est_case ((i,j,k):case):bool=
+  (i+j+k=0);;
+
+let case_libre (c:case) (conf:configuration):bool=
+  quelle_couleur c conf = Libre;;
+
+
+let supprime_dans_config ((cases, couleurs) : configuration) (c : case) : configuration =
+  let cases_filtrees = List.filter (fun (case, _) -> case <> c) cases in
+  (cases_filtrees, couleurs)
+
+let rec est_libre_seg c1 c2 conf =
+  let ((iv, jv, kv : vecteur) , d) = vec_et_dist c1 c2 in
+  let rec aux (i, j, k) dist =
+    if dist = 0 then true
     else
-      let (v, _) = vec_et_dist c c2 in
-      quelle_couleur c conf = Libre && aux (translate c v) c2
+      let next_case = (i + iv, j + jv, k + (kv)) in
+      if quelle_couleur next_case conf <> Libre then false
+      else aux next_case (dist - 1)
   in
-  aux c1 c2;;
+  aux c1 d
 
 let est_saut (c1 : case) (c2 : case) (conf : configuration) : bool =
-  let ((dx, dy, dz), dist) = vec_et_dist c1 c2 in
-  dist = 2 && est_libre_seg c1 c2 conf;;
+  let (i1, j1, k1) = c1 in
+  let (i2, j2, k2) = c2 in
+  let case_intermediaire = ((i1 + i2) / 2, (j1 + j2) / 2, (k1 + k2) / 2) in
+  sont_cases_voisines c1 c2 && 
+  quelle_couleur c2 conf = Libre && 
+  quelle_couleur case_intermediaire conf <> Libre
 
-let est_saut_multiple (coup : coup) (conf : configuration) : bool =
-  match coup with
-  | Sm path when List.length path > 1 ->
-      let valid = List.for_all (fun (c1, c2) -> est_saut c1 c2 conf) (List.tl (List.combine path (List.tl path))) in
-      valid && est_libre_seg (List.hd path) (List.hd (List.rev path)) conf
-  | _ -> false;;
+  let rec est_saut_multiple (l : case list) (conf : configuration):bool =
+    match l with 
+    |[] -> failwith "Pas de saut possible"
+    |[a] -> est_case a
+    |(x1,y1,z1)::(x2,y2,z2)::fin -> let (u,v,w),d = vec_et_dist (x1,y1,z1) (x2,y2,z2)  in 
+        est_case (x1,y1,z1) && est_case (x2,y2,z2) 
+        && (d = 2) 
+        && (not (case_libre (x2+u,y2+v,z2+w) conf)) 
+        && (case_libre (x2,y2,z2) conf) 
+        && est_saut_multiple ((x2,y2,z2)::fin) conf;;
 
-let est_coup_valide (conf : configuration) (coup : coup) : bool =
+let est_coup_valide (config : configuration) (coup : coup) : bool =
   match coup with
   | Du (c1, c2) ->
-      (* Vérifie si les cases c1 et c2 sont voisines *)
-      let voisins c1 c2 =
-        let (a, b, c) = c1 in
-        let (a', b', c') = c2 in
-        (abs (a - a') <= 1 && abs (b - b') <= 1 && abs (c - c') <= 1) in
-      (* Vérifie si c1 contient un pion du joueur courant *)
-      let joueur = quelle_couleur c1 conf in
-      let est_joueur = function
-        | Libre -> false
-        | _ -> joueur = quelle_couleur c1 conf in
-      (* Vérifie si c2 est libre et valide *)
-      let est_libre c = quelle_couleur c conf = Libre in
-      voisins c1 c2 && est_joueur joueur && est_libre c2 && (quelle_couleur c2 conf <> Dehors)
-  | _ -> false;;
+      est_case c1 &&
+      est_case c2 &&
+      sont_cases_voisines c1 c2 &&
+      quelle_couleur c1 config = List.hd (snd config) &&
+      quelle_couleur c2 config = Libre &&
+      est_dans_losange c2 dim
+  | Sm cases ->
+      est_saut_multiple cases config &&
+      est_dans_losange (der_liste cases) dim;;
 
-let applique_coup (conf : configuration) (coup : coup) : configuration =
-  let (cases, couleurs) = conf in
+let applique_coup (config : configuration) (coup : coup) : configuration =
   match coup with
-  | Du (c1, c2) when est_coup_valide conf coup ->
-      let updated_cases = List.map (fun (c, col) -> if c = c1 then (c2, col) else (c, col)) cases in
-      (updated_cases, couleurs)
-  | _ -> conf;;
+  | Sm cases ->
+      if not (est_coup_valide config coup) then
+        failwith "Coup invalide"
+      else
+        let rec appliquer_saut_multiple cases conf =
+          match cases with
+          | [] -> conf
+          | [c] -> conf 
+          | c1 :: c2 :: rest ->
+              let couleur = quelle_couleur c1 conf in
+              let conf_sans_c1 = supprime_dans_config conf c1 in
+              let (cases, couleurs) = conf_sans_c1 in
+              let nouvelle_conf = ((c2, couleur) :: cases, couleurs) in
+              appliquer_saut_multiple (c2 :: rest) nouvelle_conf
+        in
+        appliquer_saut_multiple cases config
+  | Du (c1, c2) ->
+      if not (est_coup_valide config coup) then
+        failwith "Coup invalide"
+      else
+        let couleur = quelle_couleur c1 config in
+        let config_sans_c1 = supprime_dans_config config c1 in
+        let (cases, couleurs) = config_sans_c1 in
+        ((c2, couleur) :: cases, couleurs)
 
-  let est_coup_valide (conf : configuration) (coup : coup) : bool =
-    let joueur_courant = List.hd (liste_joueurs conf) in
-    match coup with
-    | Du (c1, c2) ->
-        (* Vérifie si les cases c1 et c2 sont voisines *)
-        let voisins c1 c2 =
-          let (a, b, c) = c1 in
-          let (a', b', c') = c2 in
-          (abs (a - a') <= 1 && abs (b - b') <= 1 && abs (c - c') <= 1) in
-        (* Vérifie si c1 contient un pion du joueur courant *)
-        let est_joueur = function
-          | Libre -> false
-          | _ -> joueur_courant = quelle_couleur c1 conf in
-        (* Vérifie si c2 est libre et valide *)
-        let est_libre c = quelle_couleur c conf = Libre in
-        voisins c1 c2 && est_joueur joueur_courant && est_libre c2 && (quelle_couleur c2 conf <> Dehors)
-    | Sm path when List.length path > 1 ->
-        let valid = List.for_all (fun (c1, c2) -> est_saut c1 c2 conf) (List.tl (List.combine path (List.tl path))) in
-        valid && est_libre_seg (List.hd path) (List.hd (List.rev path)) conf
-    | _ -> false;;
-
-let mis_a_jour_configuration (conf : configuration) (coup : coup) : (configuration, string) result =
+let mis_a_jour_configuration (conf : configuration) (coup : coup) =
   match coup with
-  | Du (c1, c2) when est_coup_valide conf coup ->
-      let (cases, couleurs) = conf in
-      let updated_cases = List.map (fun (c, col) -> if c = c1 then (c2, col) else (c, col)) cases in
-      Ok (updated_cases, couleurs)
-  | Sm path when est_saut_multiple coup conf ->
-      let rec aux conf path =
-        match path with
-        | [] | [_] -> Ok conf
-        | c1 :: c2 :: rest ->
-            (match mis_a_jour_configuration conf (Du (c1, c2)) with
-            | Ok new_conf -> aux new_conf (c2 :: rest)
-            | Error e -> Error e)
-      in
-      aux conf path
-  | Du _ -> Error "Ce coup n'est pas valide, la case d'arrivée est occupée."
-  | Sm _ -> Error "Ce saut multiple n'est pas valide."
-  | _ -> Error "Coup non reconnu.";;
+  | Sm _ ->
+      if not (est_coup_valide conf coup) then
+        Error "Coup invalide pour saut multiple"
+      else
+        Ok (applique_coup conf coup)
+  | Du (c1, c2) ->
+      if not (est_dans_etoile c2 dim) then
+        Error "La case d'arrivée n'est pas dans l'étoile"
+      else if quelle_couleur c1 conf <> List.hd (snd conf) then
+        Error "Ce n'est pas votre pion"
+      else if quelle_couleur c2 conf <> Libre then
+        Error "La case d'arrivée n'est pas libre"
+      else if not (sont_cases_voisines c1 c2) then
+        Error "Les cases ne sont pas voisines"
+      else
+        try
+          Ok (applique_coup conf coup)
+        with
+          | Failure msg -> Error msg
+
 
 let gagnant _ = false
 let coup_possible _ _ = []
