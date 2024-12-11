@@ -1,8 +1,8 @@
-let dim = 3;;
+let dim = 3
 
-type case = int * int * int;;
+type case = int * int * int
 
-type vecteur = int * int * int;;
+type vecteur = int * int * int
 
 type couleur =
   | Vert
@@ -12,7 +12,8 @@ type couleur =
   | Bleu
   | Marron
   | Libre (*case libre du plateau*)
-  | Dehors (*case en dehors du plateau, utile pour l'affichage*);;
+  | Dehors
+(*case en dehors du plateau, utile pour l'affichage*)
 
 let string_of_couleur x =
   match x with
@@ -23,37 +24,30 @@ let string_of_couleur x =
   | Bleu -> "Bleu"
   | Marron -> "Marron"
   | Libre -> "Libre"
-  | Dehors -> "Dehors";; 
+  | Dehors -> "Dehors"
 
-type case_coloree = case * couleur;;
-type configuration = case_coloree list * couleur list;;
-type coup = Du of case * case | Sm of case list;;
+type case_coloree = case * couleur
+type configuration = case_coloree list * couleur list
+type coup = Du of case * case | Sm of case list
 
-let configuration_initial = ([], [ Vert; Jaune; Rouge; Noir; Bleu; Marron ]);;
-let liste_joueurs (_, l) = l;;
-let quelle_couleur _ _ = Libre;;
-let mis_a_jour_configuration _ _ = Error "To do";;
-let gagnant _ = Libre;;
-let coup_possible _ _ = [];;
+let liste_joueurs (_, l) = l
+let quelle_couleur _ _ = Libre
+let mis_a_jour_configuration conf _ = Ok (conf)
+let gagnant _ = Libre
+let coup_possible _ _ = []
 (**)
 let est_dans_losange ((i, j, k) : case) dim =
   (j <= dim) && (j >= -dim) &&
   (k <= dim) && (k >= -dim) &&
   (i + j + k = 0);;
 
-let test_est_dans_losange (i, j, k) =
-  if est_dans_losange (i,j,k) dim then
+(* fonctions tests de est_dans_losange *)
+let()=
+  let case = (0, 0, 0) in
+  if est_dans_losange case dim then
     Printf.printf "La case est dans le losange"
   else
     Printf.printf "La case n'est pas dans le losange";;
-
-test_est_dans_losange (0,0,0);; (* renvoie La case est dans le losange *)
-test_est_dans_losange (4,2,-6);; (* renvoie La case n'est pas dans le losange *)
-test_est_dans_losange (33,23,-56);; (* renvoie La case n'est pas dans le losange *)
-test_est_dans_losange (0,1,0);; (* renvoie La case n'est pas dans le losange *)
-test_est_dans_losange (5,-4,-1);; (* renvoie La case n'est pas dans le losange *)
-test_est_dans_losange (-5,-1,6);; (* renvoie La case n'est pas dans le losange *)
-test_est_dans_losange (6,-1,-5);; (* renvoie La case n'est pas dans le losange *)
 
 
 let est_dans_etoile ((i, j, k) : case) dim =
@@ -67,46 +61,31 @@ let est_dans_etoile ((i, j, k) : case) dim =
   est_dans_losange (i, j, k) dim || est_dans_losange (j, k, i) dim || est_dans_losange (k, i, j) dim;;
 
 (* fonctions tests de est_dans_etoile *)
-let test_est_dans_etoile (i, j, k) =
-  if est_dans_etoile (i,j,k) dim then
-    Printf.printf "La case est dans le losange"
-  else
-    Printf.printf "La case n'est pas dans le losange";;
-
-test_est_dans_etoile (0,0,0);; (* renvoie La case est dans l'etoile *)
-test_est_dans_etoile (4,2,-6);; (* renvoie La case n'est dans l'etoile *)
-test_est_dans_etoile (33,23,-56);; (* renvoie La case n'est pas dans l'etoile *)
-test_est_dans_etoile (0,1,0);; (* renvoie La case n'est pas dans l'etoile *)
-test_est_dans_etoile (5,-4,-1);; (* renvoie La case n'est dans l'etoile *)
-test_est_dans_etoile (-5,-1,6);; (* renvoie La case n'est dans l'etoile *)
-test_est_dans_etoile (6,-1,-5);; (* renvoie La case n'est dans l'etoile *)
-test_est_dans_etoile (6,-3,-3);; (* renvoie La case est dans l'etoile *)
-test_est_dans_etoile (-2,-3,5);; (* renvoie La case est dans l'etoile *)
-test_est_dans_etoile (3,-5,2);; (* renvoie La case est dans l'etoile *)
-
-let quelle_couleur (case : case) (configuration : configuration) : couleur =
-  let (cases, _) = configuration in
-  if est_dans_etoile case (dim) then Libre
-  else Dehors;; 
-
-(* fonctions tests de quelle_couleur *)
-let()=
+let()= 
   let case = (0, 0, 0) in
-  let configuration = ([], [ Vert; Jaune; Rouge; Noir; Bleu; Marron ]) in
-  let couleur = quelle_couleur case configuration in
-  Printf.printf "La couleur de la case est %s" (string_of_couleur couleur);;
+  if est_dans_etoile case dim then
+    Printf.printf "La case est dans l'etoile"
+  else
+    Printf.printf "La case n'est pas dans l'etoile";;
 
+let quelle_couleur c (config, _) =
+  if not (est_dans_etoile c dim) then
+    Dehors
+  else
+    match List.assoc_opt c config with
+    | None -> Libre
+    | Some couleur -> couleur
 
 let tourne_case m c =
   let (i, j, k) = c in
-  match m mod 6 with
-  | 0 -> (i, j, k)
-  | 1 | -5 -> (-k, -i, -j)
-  | 2 | -4 -> (j, k, i)
-  | 3 | -3 -> (-i, -k, -j)
-  | 4 | -2 -> (k, j, i)
-  | 5 | -1 -> (-j, -i, -k)
-  | _ -> failwith "Impossible";;
+    match m mod 6 with
+    | 0 -> (i, j, k)
+    | 1 | -5 -> (-k, -i, -j)
+    | 2 | -4 -> (j, k, i)
+    | 3 | -3 -> (-i, -k, -j)
+    | 4 | -2 -> (k, j, i)
+    | 5 | -1 -> (-j, -i, -k)
+    | _ -> failwith "Impossible";;
 
 (* fonctions tests de tourne_case *)
 let()=
@@ -114,7 +93,6 @@ let()=
   let m = 1 in
   let (i, j, k) = tourne_case m case in
   Printf.printf "La case tournee est (%d, %d, %d)" i j k;;
-
 
 let translate ((c1, c2, c3): case) ((v1, v2, v3): vecteur) : case =
   (c1 + v1, c2 + v2, c3 + v3);;
@@ -137,16 +115,15 @@ let()=
   let (i, j, k) = diff_case case1 case2 in
   Printf.printf "La difference des cases est (%d, %d, %d)" i j k;;
 
-
 let sont_cases_voisines (case1 : case) (case2 : case) : bool =
   let (c1a, c2a, c3a) = case1  in
   let (c1b, c2b, c3b) = case2  in
   if (c1a, c2a, c3a) = (c1b, c2b + 1, c3b - 1) ||
-     (c1a, c2a, c3a) = (c1b, c2b - 1, c3b + 1) ||
-     (c1a, c2a, c3a) = (c1b + 1, c2b, c3b - 1) ||
-     (c1a, c2a, c3a) = (c1b - 1, c2b, c3b + 1) ||
-     (c1a, c2a, c3a) = (c1b - 1, c2b + 1, c3b) ||
-     (c1a, c2a, c3a) = (c1b + 1, c2b - 1, c3b) then true
+    (c1a, c2a, c3a) = (c1b, c2b - 1, c3b + 1) ||
+    (c1a, c2a, c3a) = (c1b + 1, c2b, c3b - 1) ||
+    (c1a, c2a, c3a) = (c1b - 1, c2b, c3b + 1) ||
+    (c1a, c2a, c3a) = (c1b - 1, c2b + 1, c3b) ||
+    (c1a, c2a, c3a) = (c1b + 1, c2b - 1, c3b) then true
   else false;;
 
 (* fonctions tests de sont_cases_voisines *)
@@ -203,26 +180,29 @@ let rec der_liste (l : couleur list) : couleur =
   | [] -> failwith "Liste vide : pas de dernier élément"
   | [a] -> a 
   | _ :: z -> der_liste z;;
+let rec remplir_segment m (i, j, k) =
+  if m <= 0 then []
+  else
+    (i, j, k) :: remplir_segment (m - 1) (i, j + 1, k - 1);;
 
-let rec remplir_segement (m : int) (c : case) : case list =
-  let (i,j,k) = c in
-  if m = 0 then []
-  else (i,j,k) :: remplir_segement (m-1) (i,j+1,k-1);;
+let rec remplir_triangle_bas m (i, j, k) =
+  (* Génère les cases d'un triangle orienté vers le bas *)
+  if m <= 0 then []
+  else
+    (* Génère un segment horizontal puis descend d'une ligne *)
+    remplir_segment m (i, j, k) @ remplir_triangle_bas (m - 1) (i - 1, j + 1, k);;
 
-let rec remplir_triangle_bas (m : int) (c : case) : case list =
-  let (i,j,k) = c in
-  if m = 0 then []
-  else remplir_segement m c @ remplir_triangle_bas (m-1) (i-1,j+1,k);;
+let rec remplir_triangle_haut m (i, j, k) =
+  (* Génère les cases d'un triangle orienté vers le haut *)
+  if m <= 0 then []
+  else
+    (* Génère un segment horizontal puis monte d'une ligne *)
+    remplir_segment m (i, j, k) @ remplir_triangle_haut (m - 1) (i + 1, j, k - 1);;
 
-let rec remplir_triangle_haut (m : int) (c: case) : case list =
-  let (i,j,k) = c in
-  if m = 0 then[]
-  else remplir_segement m c @ remplir_triangle_haut (m-1) (i+1,j,k-1);;
-
-let rec colorie (coul : couleur) (lc : case list) : case_coloree list =
-  match lc with
-  |[] -> []
-  |t :: q -> (t, coul) :: (colorie coul q);;
+let rec colorie (j : couleur) (liste : case list) : case_coloree list=
+  match liste with 
+    | [] -> []
+    | t :: q -> [(t,j)] @ colorie j q;;
 
 let tourne_config (cases, couleurs) =
   let n = List.length couleurs in
@@ -263,24 +243,11 @@ let remplir_init (lj : couleur list) dim : configuration =
   if List.length lj = 2 then remplir_init_2 lj dim
   else if List.length lj = 3 then remplir_init_3 lj dim 0
   else if List.length lj = 6 then remplir_init_6 lj dim 0
-  else ([],[])
+  else ([],[]);;
 
-(*remplir init -> configuration
-  confirguration = (case_coloree list,couleur list)
-  colorie -> case_coloree list
-  lj : couleur list
-  case_coloree list = (case list,coul)
-  remplir_triangle_bas -> case list*)
-  
-let rec quelle_couleur c (cases, _) =
-  match List.assoc_opt c cases with
-  | Some coul -> coul
-  | None -> Libre;;
-  
-let supprime_dans_config ((cases, couleurs) : configuration) (c : case) : configuration =
-  let nouvelles_cases = List.filter (fun (case, _) -> case <> c) cases in
-  (nouvelles_cases, couleurs);;
-  
+let configuration_initial =
+  remplir_init [Vert; Marron; Noir; Jaune; Rouge; Bleu] dim;;
+
 let rec est_libre_seg (c1:case) (c2:case) (conf:configuration) : bool =
   let rec aux (c:case) (c2:case) =
     if c = c2 then true
@@ -289,39 +256,36 @@ let rec est_libre_seg (c1:case) (c2:case) (conf:configuration) : bool =
       quelle_couleur c conf = Libre && aux (translate c v) c2
   in
   aux c1 c2;;
-  
+
 let est_saut (c1 : case) (c2 : case) (conf : configuration) : bool =
   let ((dx, dy, dz), dist) = vec_et_dist c1 c2 in
   dist = 2 && est_libre_seg c1 c2 conf;;
-  
+
 let est_saut_multiple (coup : coup) (conf : configuration) : bool =
   match coup with
   | Sm path when List.length path > 1 ->
       let valid = List.for_all (fun (c1, c2) -> est_saut c1 c2 conf) (List.tl (List.combine path (List.tl path))) in
       valid && est_libre_seg (List.hd path) (List.hd (List.rev path)) conf
   | _ -> false;;
- 
+
 let est_coup_valide (conf : configuration) (coup : coup) : bool =
   match coup with
   | Du (c1, c2) ->
-    (* Vérifie si les cases c1 et c2 sont voisines *)
+      (* Vérifie si les cases c1 et c2 sont voisines *)
       let voisins c1 c2 =
         let (a, b, c) = c1 in
         let (a', b', c') = c2 in
         (abs (a - a') <= 1 && abs (b - b') <= 1 && abs (c - c') <= 1) in
-  
       (* Vérifie si c1 contient un pion du joueur courant *)
       let joueur = quelle_couleur c1 conf in
       let est_joueur = function
         | Libre -> false
         | _ -> joueur = quelle_couleur c1 conf in
-  
       (* Vérifie si c2 est libre et valide *)
       let est_libre c = quelle_couleur c conf = Libre in
-
       voisins c1 c2 && est_joueur joueur && est_libre c2 && (quelle_couleur c2 conf <> Dehors)
   | _ -> false;;
- 
+
 let applique_coup (conf : configuration) (coup : coup) : configuration =
   let (cases, couleurs) = conf in
   match coup with
@@ -329,29 +293,51 @@ let applique_coup (conf : configuration) (coup : coup) : configuration =
       let updated_cases = List.map (fun (c, col) -> if c = c1 then (c2, col) else (c, col)) cases in
       (updated_cases, couleurs)
   | _ -> conf;;
-  
+
+  let est_coup_valide (conf : configuration) (coup : coup) : bool =
+    let joueur_courant = List.hd (liste_joueurs conf) in
+    match coup with
+    | Du (c1, c2) ->
+        (* Vérifie si les cases c1 et c2 sont voisines *)
+        let voisins c1 c2 =
+          let (a, b, c) = c1 in
+          let (a', b', c') = c2 in
+          (abs (a - a') <= 1 && abs (b - b') <= 1 && abs (c - c') <= 1) in
+        (* Vérifie si c1 contient un pion du joueur courant *)
+        let est_joueur = function
+          | Libre -> false
+          | _ -> joueur_courant = quelle_couleur c1 conf in
+        (* Vérifie si c2 est libre et valide *)
+        let est_libre c = quelle_couleur c conf = Libre in
+        voisins c1 c2 && est_joueur joueur_courant && est_libre c2 && (quelle_couleur c2 conf <> Dehors)
+    | Sm path when List.length path > 1 ->
+        let valid = List.for_all (fun (c1, c2) -> est_saut c1 c2 conf) (List.tl (List.combine path (List.tl path))) in
+        valid && est_libre_seg (List.hd path) (List.hd (List.rev path)) conf
+    | _ -> false;;
+
 let mis_a_jour_configuration (conf : configuration) (coup : coup) : (configuration, string) result =
-  let (cases, couleurs) = conf in
   match coup with
   | Du (c1, c2) when est_coup_valide conf coup ->
+      let (cases, couleurs) = conf in
       let updated_cases = List.map (fun (c, col) -> if c = c1 then (c2, col) else (c, col)) cases in
       Ok (updated_cases, couleurs)
-  | Sm path when est_saut_multiple coup conf ->  (* Gestion des sauts multiples *)
+  | Sm path when est_saut_multiple coup conf ->
       let rec aux conf path =
         match path with
-        | [] -> conf
-        | [c] -> conf  (* La case finale ne nécessite pas de changement *)
+        | [] | [_] -> Ok conf
         | c1 :: c2 :: rest ->
-            let new_conf = mis_a_jour_configuration conf (Du (c1, c2)) |> Result.get_ok in
-            aux new_conf (c2 :: rest)
+            (match mis_a_jour_configuration conf (Du (c1, c2)) with
+            | Ok new_conf -> aux new_conf (c2 :: rest)
+            | Error e -> Error e)
       in
-      Ok (aux conf path)
-  | Du _ -> Error "Ce coup n’est pas valide, la case d’arrivée est occupée."
-  | _ -> Error "Saut multiples non implementés";;
+      aux conf path
+  | Du _ -> Error "Ce coup n'est pas valide, la case d'arrivée est occupée."
+  | Sm _ -> Error "Ce saut multiple n'est pas valide."
+  | _ -> Error "Coup non reconnu.";;
 
-let gagnant  = false;;
-let coup_possible   = [];;
-let ia_next_coup  = 
+let gagnant _ = false
+let coup_possible _ _ = []
+let ia_next_coup _ = 
   let coup = Sm [] in
   let description = "Coup généré par ia_next_coup" in
   (coup, description);;
